@@ -1,0 +1,34 @@
+{
+  "name": "nodemysql",
+  "version": "0.0.0",
+  "description": "Mysql interface and helper functions, wrapping node-mysql",
+  "main": "nodemysql.js",
+  "scripts": {
+    "test": "grunt test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DubFriend/nodemysql"
+  },
+  "keywords": [
+    "mysql",
+    "node-mysql",
+    "interface",
+    "wrapper"
+  ],
+  "author": "Brian Detering <BDeterin@gmail.com> (http://www.briandetering.net/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DubFriend/nodemysql/issues"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.4",
+    "grunt-contrib-nodeunit": "~0.3.3",
+    "grunt-contrib-watch": "~0.6.1",
+    "mysql": "~2.1.1"
+  },
+  "dependencies": {
+    "q": "~1.0.1",
+    "underscore": "~1.6.0"
+  }
+}
