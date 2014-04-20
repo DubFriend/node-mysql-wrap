@@ -8,7 +8,7 @@ module.exports = function(grunt) {
 
         watch: {
             scripts: {
-                files: ['test.js'],
+                files: ['**/*'],
                 tasks: ['nodeunit']
             }
         }
