@@ -40,20 +40,25 @@ exports.query_select = function (test) {
             ],
             'no values or callback'
         );
-        return self.sql.query('SELECT ?? FROM `table` WHERE id = ?', ['unique', 2]);
 
+        return self.sql.query(
+            'SELECT ?? FROM `table` WHERE id = ?',
+            ['unique', 2]
+        );
     })
     .then(function (res) {
         test.deepEqual(res.results, [{ unique: 'b' }], 'values, no callback');
         return self.sql.query('sElEcT id FRoM `table` Where id = ?', [3]);
-
     })
     .then(function (res) {
         test.deepEqual(res.results, [{ id: 3 }], 'sql is case insensitive');
-        return self.sql.query('SELECT id FROM `table` WHERE id = 1', function (err, res) {
-            test.deepEqual(res.results, [{ id: 1 }], 'callback no values');
-            test.done();
-        });
+        return self.sql.query(
+            'SELECT id FROM `table` WHERE id = 1',
+            function (err, res) {
+                test.deepEqual(res.results, [{ id: 1 }], 'callback no values');
+                test.done();
+            }
+        );
     })
     .catch(catchPromise);
 };
@@ -72,7 +77,7 @@ exports.query_select_count = function (test) {
     test.expect(2);
     var self = this;
     var responseObject = null;
-    self.sql.query('SELECT * FROM `table` WHERE field = "foo" LIMIT 1')
+    self.sql.query('SELECT * FROM `table` WHERE field = ? LIMIT 1', ['foo'])
     .then(function (res) {
         responseObject = res;
         return self.sql.query('SELECT * FROM `table`');
@@ -101,7 +106,7 @@ exports.query_insert = function (test) {
         'VALUES ("testUniqueValue", "testFieldValue") '
     )
     .then(function (res) {
-        test.strictEqual(res.affectedRows, 1, 'counts affectedRows, promise object');
+        test.strictEqual(res.affectedRows, 1, 'affectedRows');
         test.strictEqual(res.insertId, 4, 'insert id');
         connection.query(
             'SELECT * FROM `table` WHERE `field` = "testFieldValue"',
@@ -309,7 +314,6 @@ exports.unique_constraint_error = function (test) {
     test.expect(2);
     this.sql.insert('table', { unique: 'a'})
     .catch(function (err) {
-        console.log(err);
         test.strictEqual(err.code, 'ER_DUP_ENTRY', 'error code');
         test.strictEqual(err.indexName, 'unique', 'index name');
         test.done();

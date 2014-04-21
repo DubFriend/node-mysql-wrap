@@ -6,11 +6,6 @@ module.exports = function (connection, mysql) {
 
     var self = {};
 
-    var getQueryType = function (statement) {
-        var pieces = statement.trim().split(' ');
-        return pieces[0].toUpperCase();
-    };
-
     var promiseRespond = function (def, err, res) {
         if(err) {
             def.reject(err);
@@ -38,7 +33,7 @@ module.exports = function (connection, mysql) {
         var respond = function (err, res) {
             var getRowCountForSelectQuery = function (statement, values, callback) {
                 // removes the "SELECT" and "LIMIT" portions of the query.
-                var predicate = function () {
+                var stripSELECTAndLIMIT = function (statement) {
                     return statement
                         .replace(/.* FROM /i, '')
                         .replace(/ LIMIT .*/i, '');
@@ -47,11 +42,12 @@ module.exports = function (connection, mysql) {
                 var def = Q.defer();
 
                 connection.query(
-                    'SELECT COUNT(*) FROM ' + predicate(),
+                    'SELECT COUNT(*) FROM ' + stripSELECTAndLIMIT(statement),
+                    values,
                     function (err, res) {
                         var rowCount = null;
                         if(!err) {
-                            rowCount = res[0]['COUNT(*)'];
+                            rowCount = _.first(res)['COUNT(*)'];
                         }
 
                         promiseRespond(def, err, rowCount);
@@ -66,6 +62,9 @@ module.exports = function (connection, mysql) {
 
             var wrappedResponse = (function () {
                 var wrapped = {};
+                var getQueryType = function (statement) {
+                    return _.first(statement.trim().split(' ')).toUpperCase();
+                };
                 if(getQueryType(statement) === 'SELECT') {
                     wrapped = {
                         results: res,
@@ -84,7 +83,8 @@ module.exports = function (connection, mysql) {
             var wrappedError = (function () {
                 if(err) {
                     return _.extend(err, {
-                        indexName: _.last(err.toString().split(' ')).replace(/'/g, '')
+                        indexName: _.last(err.toString().split(' '))
+                            .replace(/'/g, '')
                     });
                 }
                 else {
@@ -113,7 +113,7 @@ module.exports = function (connection, mysql) {
             var results;
             if(res && res.results) {
                 results = _.extend(res, {
-                    results: res.results[0] || null
+                    results: _.first(res.results) || null
                 });
             }
             callback(err, results);
@@ -149,35 +149,37 @@ module.exports = function (connection, mysql) {
         return self.one('SELECT * FROM ?? ' + where.sql, values, callback);
     };
 
-    var prepareInsertRows = function (rowOrRows) {
-        var values = [];
-        var fields = _.isArray(rowOrRows) ? _.keys(rowOrRows[0]) : _.keys(rowOrRows);
-        // NOTE: It is important that fieldsSQL is generated before valuesSQL
-        // (because the order of the values array would otherwise be incorrect)
-        var fieldsSQL = '(' + _.map(fields, function (field) {
-            values.push(field);
-            return '??';
-        }).join(', ') + ')';
-
-        var processValuesSQL = function (row) {
-            return '(' + _.map(fields, function (field) {
-                values.push(row[field]);
-                return '?';
-            }) + ')';
-        };
-
-        var valuesSQL = _.isArray(rowOrRows) ?
-            _.map(rowOrRows, processValuesSQL).join(', ') :
-            processValuesSQL(rowOrRows);
-
-        return {
-            values: values,
-            sql: fieldsSQL + ' VALUES ' + valuesSQL
-        };
-    };
-
     self.insert = function (table, rowOrRows, callback) {
+        var prepareInsertRows = function (rowOrRows) {
+            var values = [];
+            var fields = _.isArray(rowOrRows) ?
+                _.keys(_.first(rowOrRows)) : _.keys(rowOrRows);
+            // NOTE: It is important that fieldsSQL is generated before valuesSQL
+            // (because the order of the values array would otherwise be incorrect)
+            var fieldsSQL = '(' + _.map(fields, function (field) {
+                values.push(field);
+                return '??';
+            }).join(', ') + ')';
+
+            var processValuesSQL = function (row) {
+                return '(' + _.map(fields, function (field) {
+                    values.push(row[field]);
+                    return '?';
+                }) + ')';
+            };
+
+            var valuesSQL = _.isArray(rowOrRows) ?
+                _.map(rowOrRows, processValuesSQL).join(', ') :
+                processValuesSQL(rowOrRows);
+
+            return {
+                values: values,
+                sql: fieldsSQL + ' VALUES ' + valuesSQL
+            };
+        };
+
         var rows = prepareInsertRows(rowOrRows);
+
         return self.query(
             'INSERT INTO ?? ' + rows.sql,
             [table].concat(rows.values),
@@ -185,17 +187,17 @@ module.exports = function (connection, mysql) {
         );
     };
 
-    var prepareSetRows = function (setData) {
-        var values = [];
-        var sql = ' SET ' + _.map(setData, function (val, key) {
-            values.push(key);
-            values.push(val);
-            return '?? = ?';
-        }).join(', ');
-        return { values: values, sql: sql };
-    };
-
     self.update = function (table, setData, whereEquals, callback) {
+        var prepareSetRows = function (setData) {
+            var values = [];
+            var sql = ' SET ' + _.map(setData, function (val, key) {
+                values.push(key);
+                values.push(val);
+                return '?? = ?';
+            }).join(', ');
+            return { values: values, sql: sql };
+        };
+
         var set = prepareSetRows(setData);
         var where = prepareWhereEquals(whereEquals);
         var values = [table].concat(set.values).concat(where.values);
