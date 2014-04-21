@@ -64,7 +64,7 @@ module.exports = function (connection, mysql) {
                 return def.promise;
             };
 
-            var wrapedResponse = (function () {
+            var wrappedResponse = (function () {
                 var wrapped = {};
                 if(getQueryType(statement) === 'SELECT') {
                     wrapped = {
@@ -81,8 +81,19 @@ module.exports = function (connection, mysql) {
                 return wrapped;
             }());
 
-            callback(err, wrapedResponse);
-            promiseRespond(def, err, wrapedResponse);
+            var wrappedError = (function () {
+                if(err) {
+                    return _.extend(err, {
+                        indexName: _.last(err.toString().split(' ')).replace(/'/g, '')
+                    });
+                }
+                else {
+                    return null;
+                }
+            }());
+
+            callback(wrappedError, wrappedResponse);
+            promiseRespond(def, wrappedError, wrappedResponse);
         };
 
         connection.query(statement, values, respond);

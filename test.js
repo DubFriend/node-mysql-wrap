@@ -304,3 +304,14 @@ exports.delete = function (test) {
         );
     });
 };
+
+exports.unique_constraint_error = function (test) {
+    test.expect(2);
+    this.sql.insert('table', { unique: 'a'})
+    .catch(function (err) {
+        console.log(err);
+        test.strictEqual(err.code, 'ER_DUP_ENTRY', 'error code');
+        test.strictEqual(err.indexName, 'unique', 'index name');
+        test.done();
+    });
+};
