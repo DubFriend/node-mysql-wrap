@@ -1,25 +1,26 @@
 {
-  "name": "nodemysql",
+  "name": "mysql-wrap",
   "version": "0.0.0",
   "description": "Mysql interface and helper functions, wrapping node-mysql",
-  "main": "nodemysql.js",
+  "main": "mysql-wrap.js",
   "scripts": {
     "test": "grunt test"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DubFriend/nodemysql"
+    "url": "https://github.com/DubFriend/node-mysql-wrap"
   },
   "keywords": [
     "mysql",
     "node-mysql",
     "interface",
-    "wrapper"
+    "wrapper",
+    "database"
   ],
   "author": "Brian Detering <BDeterin@gmail.com> (http://www.briandetering.net/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/DubFriend/nodemysql/issues"
+    "url": "https://github.com/DubFriend/node-mysql-wrap/issues"
   },
   "devDependencies": {
     "grunt": "~0.4.4",
