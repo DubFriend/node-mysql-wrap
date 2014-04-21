@@ -20,34 +20,6 @@ module.exports = function (connection, mysql) {
         }
     };
 
-    var getRowCountForSelectQuery = function (statement, values, callback) {
-        // removes the "SELECT" and "LIMIT" portions of the query.
-        var predicate = function () {
-            return statement
-                .replace(/.* FROM /i, '')
-                .replace(/ LIMIT .*/i, '');
-        };
-
-        var def = Q.defer();
-
-        connection.query(
-            'SELECT COUNT(*) FROM ' + predicate(),
-            function (err, res) {
-                var rowCount = null;
-                if(!err) {
-                    rowCount = res[0]['COUNT(*)'];
-                }
-
-                promiseRespond(def, err, rowCount);
-                if(callback) {
-                    callback(err, rowCount);
-                }
-            }
-        );
-
-        return def.promise;
-    };
-
     var getValueFromParams = function (valuesOrCallback, callbackOrNothing) {
         return _.isArray(valuesOrCallback) ? valuesOrCallback : [];
     };
@@ -64,36 +36,53 @@ module.exports = function (connection, mysql) {
         var def = Q.defer();
 
         var respond = function (err, res) {
-            var wrapResponse = function (res) {
+            var getRowCountForSelectQuery = function (statement, values, callback) {
+                // removes the "SELECT" and "LIMIT" portions of the query.
+                var predicate = function () {
+                    return statement
+                        .replace(/.* FROM /i, '')
+                        .replace(/ LIMIT .*/i, '');
+                };
 
-                var wrapped = {};
+                var def = Q.defer();
 
-                switch(getQueryType(statement)) {
-                    case 'SELECT':
-                        wrapped.results = res;
-                        wrapped.count = _.partial(
-                            getRowCountForSelectQuery,
-                            statement,
-                            values
-                        );
-                        break;
-                    case 'INSERT':
-                        wrapped = res;
-                        break;
-                    case 'UPDATE':
-                        wrapped = res;
-                        break;
-                    case 'DELETE':
-                        wrapped = res;
-                        break;
-                    default:
-                        wrapped = res;
-                }
-                return wrapped;
+                connection.query(
+                    'SELECT COUNT(*) FROM ' + predicate(),
+                    function (err, res) {
+                        var rowCount = null;
+                        if(!err) {
+                            rowCount = res[0]['COUNT(*)'];
+                        }
+
+                        promiseRespond(def, err, rowCount);
+                        if(callback) {
+                            callback(err, rowCount);
+                        }
+                    }
+                );
+
+                return def.promise;
             };
 
-            callback(err, wrapResponse(res));
-            promiseRespond(def, err, wrapResponse(res));
+            var wrapedResponse = (function () {
+                var wrapped = {};
+                if(getQueryType(statement) === 'SELECT') {
+                    wrapped = {
+                        results: res,
+                        count: _.partial(
+                            getRowCountForSelectQuery,
+                            statement, values
+                        )
+                    };
+                }
+                else {
+                    wrapped = res;
+                }
+                return wrapped;
+            }());
+
+            callback(err, wrapedResponse);
+            promiseRespond(def, err, wrapedResponse);
         };
 
         connection.query(statement, values, respond);
@@ -149,16 +138,63 @@ module.exports = function (connection, mysql) {
         return self.one('SELECT * FROM ?? ' + where.sql, values, callback);
     };
 
-    self.insert = function (table, rowOrRows, callback) {
+    var prepareInsertRows = function (rowOrRows) {
+        var values = [];
+        var fields = _.isArray(rowOrRows) ? _.keys(rowOrRows[0]) : _.keys(rowOrRows);
+        // NOTE: It is important that fieldsSQL is generated before valuesSQL
+        // (because the order of the values array would otherwise be incorrect)
+        var fieldsSQL = '(' + _.map(fields, function (field) {
+            values.push(field);
+            return '??';
+        }).join(', ') + ')';
 
+        var processValuesSQL = function (row) {
+            return '(' + _.map(fields, function (field) {
+                values.push(row[field]);
+                return '?';
+            }) + ')';
+        };
+
+        var valuesSQL = _.isArray(rowOrRows) ?
+            _.map(rowOrRows, processValuesSQL).join(', ') :
+            processValuesSQL(rowOrRows);
+
+        return {
+            values: values,
+            sql: fieldsSQL + ' VALUES ' + valuesSQL
+        };
+    };
+
+    self.insert = function (table, rowOrRows, callback) {
+        var rows = prepareInsertRows(rowOrRows);
+        return self.query(
+            'INSERT INTO ?? ' + rows.sql,
+            [table].concat(rows.values),
+            callback
+        );
+    };
+
+    var prepareSetRows = function (setData) {
+        var values = [];
+        var sql = ' SET ' + _.map(setData, function (val, key) {
+            values.push(key);
+            values.push(val);
+            return '?? = ?';
+        }).join(', ');
+        return { values: values, sql: sql };
     };
 
     self.update = function (table, setData, whereEquals, callback) {
-
+        var set = prepareSetRows(setData);
+        var where = prepareWhereEquals(whereEquals);
+        var values = [table].concat(set.values).concat(where.values);
+        return self.query('UPDATE ??' + set.sql + where.sql, values, callback);
     };
 
     self.delete = function (table, whereEquals, callback) {
-
+        var where = prepareWhereEquals(whereEquals);
+        var values = [table].concat(where.values);
+        return self.one('DELETE FROM ?? ' + where.sql, values, callback);
     };
 
     return self;

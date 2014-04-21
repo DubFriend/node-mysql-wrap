@@ -64,7 +64,8 @@ exports.query_select_no_results = function (test) {
     .then(function (res) {
         test.deepEqual(res.results, [], 'returns empty array');
         test.done();
-    });
+    })
+    .catch(catchPromise);
 };
 
 exports.query_select_count = function (test) {
@@ -93,7 +94,7 @@ exports.query_select_count = function (test) {
 };
 
 exports.query_insert = function (test) {
-    test.expect(2);
+    test.expect(3);
     var responseObject;
     this.sql.query(
         'INSERT INTO `table` (`unique`, `field`) ' +
@@ -101,6 +102,7 @@ exports.query_insert = function (test) {
     )
     .then(function (res) {
         test.strictEqual(res.affectedRows, 1, 'counts affectedRows, promise object');
+        test.strictEqual(res.insertId, 4, 'insert id');
         connection.query(
             'SELECT * FROM `table` WHERE `field` = "testFieldValue"',
             function (err, res) {
@@ -110,17 +112,24 @@ exports.query_insert = function (test) {
                 test.done();
             }
         );
-    });
+    })
+    .catch(catchPromise);
 };
 
 exports.query_update = function (test) {
-    test.expect(2);
-    this.sql.query('UPDATE `table` SET `field` = "edit" WHERE `field` = "foo"')
+    test.expect(5);
+    var self = this;
+    self.sql.query('UPDATE `table` SET `field` = "edit" WHERE `field` = "foo"')
     .then(function (res) {
-        test.strictEqual(
-            res.affectedRows, 2,
-            'responseObject returns # of affectedRows'
+        test.strictEqual(res.affectedRows, 2, 'affectedRows all changed');
+        test.strictEqual(res.changedRows, 2, 'changedRows all changed');
+        return self.sql.query(
+            'UPDATE `table` SET `field` = "edit" WHERE `field` = "edit"'
         );
+    })
+    .then(function (res) {
+        test.strictEqual(res.affectedRows, 2, 'affectedRows none changed');
+        test.strictEqual(res.changedRows, 0, 'changedRows none changed');
         connection.query(
             'SELECT * FROM `table` WHERE `field` = "edit"',
             function(err, rows) {
@@ -131,7 +140,8 @@ exports.query_update = function (test) {
                 test.done();
             }
         );
-    });
+    })
+    .catch(catchPromise);
 };
 
 exports.query_delete = function (test) {
@@ -152,7 +162,8 @@ exports.query_delete = function (test) {
                 test.done();
             }
         );
-    });
+    })
+    .catch(catchPromise);
 };
 
 exports.one = function (test) {
@@ -189,7 +200,8 @@ exports.select = function (test) {
             );
             test.done();
         });
-    });
+    })
+    .catch(catchPromise);
 };
 
 exports.selectOne = function (test) {
@@ -208,5 +220,87 @@ exports.selectOne = function (test) {
             );
             test.done();
         });
+    })
+    .catch(catchPromise);
+};
+
+exports.insert_one_row = function (test) {
+    test.expect(3);
+    var self = this;
+    self.sql.insert('table', { unique: 'd', field: 'baz' })
+    .then(function (res) {
+        test.strictEqual(res.affectedRows, 1, 'returns affectedRows');
+        test.strictEqual(res.insertId, 4, 'returns insert id');
+        connection.query(
+            'SELECT * FROM `table` WHERE `id` = 4',
+            function (err, res) {
+                test.deepEqual(res, [
+                    { id: 4, unique: 'd', field: 'baz' }
+                ], 'inserts into database');
+                test.done();
+            }
+        );
+    })
+    .catch(catchPromise);
+};
+
+exports.insert_multi_row = function (test) {
+    test.expect(3);
+    var self = this;
+    self.sql.insert('table', [
+        { unique: 'd', field: 'new' },
+        { unique: 'e', field: 'new' }
+    ])
+    .then(function (res) {
+        test.strictEqual(res.affectedRows, 2, 'returns affectedRows');
+        test.strictEqual(res.insertId, 4, 'returns first insert id');
+        connection.query(
+            'SELECT * FROM `table` WHERE `field` = "new"',
+            function (err, res) {
+                test.deepEqual(res, [
+                    { id: 4, unique: 'd', field: 'new' },
+                    { id: 5, unique: 'e', field: 'new' }
+                ], 'inserts into database');
+                test.done();
+            }
+        );
+    })
+    .catch(catchPromise);
+};
+
+exports.update = function (test) {
+    test.expect(1);
+    var self = this;
+    self.sql.update('table', { field: 'edit', unique: 'd' }, { id: 1 })
+    .then(function (res) {
+        connection.query(
+            'SELECT * FROM `table`',
+            function (err, res) {
+                test.deepEqual(res, [
+                    { id: 1, unique: 'd', field: 'edit' },
+                    { id: 2, unique: 'b', field: 'bar' },
+                    { id: 3, unique: 'c', field: 'foo' }
+                ], 'updates database');
+                test.done();
+            }
+        );
+    });
+};
+
+exports.delete = function (test) {
+    test.expect(1);
+    var self = this;
+    self.sql.delete('table', { id: 1 })
+    .then(function (res) {
+        connection.query(
+            'SELECT * FROM `table`',
+            function (err, res) {
+                test.deepEqual(res, [
+                    { id: 2, unique: 'b', field: 'bar' },
+                    { id: 3, unique: 'c', field: 'foo' }
+                ], 'deleted from database');
+                test.done();
+            }
+        );
     });
 };
