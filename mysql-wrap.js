@@ -48,18 +48,24 @@ module.exports = function (connection, mysql) {
         return def.promise;
     };
 
-    self.query = function (statement, valuesOrCallback, callbackOrNothing) {
-        var values = _.isArray(valuesOrCallback) ? valuesOrCallback : [];
+    var getValueFromParams = function (valuesOrCallback, callbackOrNothing) {
+        return _.isArray(valuesOrCallback) ? valuesOrCallback : [];
+    };
 
-        var callback = _.isFunction(valuesOrCallback) ?
+    var getCallBackFromParams = function (valuesOrCallback, callbackOrNothing) {
+        return _.isFunction(valuesOrCallback) ?
             valuesOrCallback : _.isFunction(callbackOrNothing) ?
                 callbackOrNothing : function () {};
+    };
 
+    self.query = function (statement, valuesOrCallback, callbackOrNothing) {
+        var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
+        var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
         var def = Q.defer();
 
         var respond = function (err, res) {
             var wrapResponse = function (res) {
-                // return res;
+
                 var wrapped = {};
 
                 switch(getQueryType(statement)) {
@@ -72,19 +78,20 @@ module.exports = function (connection, mysql) {
                         );
                         break;
                     case 'INSERT':
-                        // wrapped.count = function () {
-                        //     return res.
-                        // }
+                        wrapped = res;
                         break;
                     case 'UPDATE':
+                        wrapped = res;
                         break;
                     case 'DELETE':
+                        wrapped = res;
                         break;
                     default:
-
+                        wrapped = res;
                 }
                 return wrapped;
             };
+
             callback(err, wrapResponse(res));
             promiseRespond(def, err, wrapResponse(res));
         };
@@ -94,16 +101,52 @@ module.exports = function (connection, mysql) {
         return def.promise;
     };
 
-    self.one = function (statement, values, callback) {
+    self.one = function (statement, valuesOrCallback, callbackOrNothing) {
+        var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
+        var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
+        var def = Q.defer();
 
+        var limitedStatement = / LIMIT /.test(statement.toUpperCase) ?
+            statement : statement + ' LIMIT 1';
+
+        self.query(limitedStatement, values, function (err, res) {
+            var results;
+            if(res && res.results) {
+                results = _.extend(res, {
+                    results: res.results[0] || null
+                });
+            }
+            callback(err, results);
+            promiseRespond(def, err, results);
+        });
+
+        return def.promise;
+    };
+
+    var prepareWhereEquals = function (whereEquals) {
+        var values = [];
+        var sql = _.map(whereEquals, function (val, key) {
+            values.push(key);
+            values.push(val);
+            return '?? = ?';
+        }, '').join(' AND ');
+
+        return {
+            values: values,
+            sql: sql ? ' WHERE ' + sql : sql
+        };
     };
 
     self.select = function (table, whereEquals, callback) {
-
+        var where = prepareWhereEquals(whereEquals);
+        var values = [table].concat(where.values);
+        return self.query('SELECT * FROM ?? ' + where.sql, values, callback);
     };
 
     self.selectOne = function (table, whereEquals, callback) {
-
+        var where = prepareWhereEquals(whereEquals);
+        var values = [table].concat(where.values);
+        return self.one('SELECT * FROM ?? ' + where.sql, values, callback);
     };
 
     self.insert = function (table, rowOrRows, callback) {
@@ -115,11 +158,6 @@ module.exports = function (connection, mysql) {
     };
 
     self.delete = function (table, whereEquals, callback) {
-
-    };
-
-    // gets the affected row count for the last executed query.
-    self.count = function () {
 
     };
 
