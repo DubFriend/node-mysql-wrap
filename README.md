@@ -38,7 +38,7 @@ of rows the associated SELECT statement would have returned without a LIMIT clau
 In the following examples, parameters marked with an asterik (*) character are
 optional.
 
-###query(sqlStatement, *values, *callback)
+###query(sqlStatement, \*values, \*callback)
 ```javascript
 sql.query('SELECT name FROM fruit WHERE color = "yellow" LIMIT 2')
 .then(function (res) {
@@ -51,21 +51,21 @@ sql.query('SELECT name FROM fruit WHERE color = "yellow" LIMIT 2')
 });
 ```
 
-###one(sqlStatement, *values, *callback)
+###one(sqlStatement, \*values, \*callback)
 Works the same as sql.query except it only returns a single row instead of an array
 of rows.  Adds a "LIMIT 1" clause if a LIMIT clause is not allready present in
 the sqlStatement.
 
-###select(table, *whereEqualsObject, *callback)
+###select(table, \*whereEqualsObject, \*callback)
 ```javascript
 // equivalent to sql.query('SELECT * FROM fruit WHERE color = "yellow" AND isRipe = "true"')
 sql.select('fruit', { color: 'yellow', isRipe: true })
 ```
 
-###selectOne(table, *whereEqualsObject, *callback)
+###selectOne(table, \*whereEqualsObject, \*callback)
 Same as sql.select except selectOne returns a single row instead of an array of rows.
 
-###insert(table, insertObject, *callback)
+###insert(table, insertObject, \*callback)
 ```javascript
 sql.insert('fruit', { name: 'plum', color: 'purple' });
 ```
@@ -77,12 +77,12 @@ sql.insert('fruit', [
 ])
 ```
 
-###update(table, setValues, *whereEqualsObject, *callback)
+###update(table, setValues, \*whereEqualsObject, \*callback)
 ```javascript
 sql.update('fruit', { isRipe: false }, { name: 'grape' })
 ```
 
-###delete(table, *whereEqualsObject, *callback)
+###delete(table, \*whereEqualsObject, \*callback)
 ```javascript
 sql.delete('fruit', { isRipe: false })
 ```
