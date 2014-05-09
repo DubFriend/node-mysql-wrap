@@ -295,14 +295,13 @@ exports.update = function (test) {
 exports.delete = function (test) {
     test.expect(1);
     var self = this;
-    self.sql.delete('table', { id: 1 })
+    self.sql.delete('table', { field: 'foo' })
     .then(function (res) {
         connection.query(
             'SELECT * FROM `table`',
             function (err, res) {
                 test.deepEqual(res, [
-                    { id: 2, unique: 'b', field: 'bar' },
-                    { id: 3, unique: 'c', field: 'foo' }
+                    { id: 2, unique: 'b', field: 'bar' }
                 ], 'deleted from database');
                 test.done();
             }

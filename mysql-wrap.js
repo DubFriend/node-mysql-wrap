@@ -126,8 +126,7 @@ module.exports = function (connection, mysql) {
     var prepareWhereEquals = function (whereEquals) {
         var values = [];
         var sql = _.map(whereEquals, function (val, key) {
-            values.push(key);
-            values.push(val);
+            values.push(key, val);
             return '?? = ?';
         }, '').join(' AND ');
 
@@ -191,8 +190,7 @@ module.exports = function (connection, mysql) {
         var prepareSetRows = function (setData) {
             var values = [];
             var sql = ' SET ' + _.map(setData, function (val, key) {
-                values.push(key);
-                values.push(val);
+                values.push(key, val);
                 return '?? = ?';
             }).join(', ');
             return { values: values, sql: sql };
@@ -207,7 +205,7 @@ module.exports = function (connection, mysql) {
     self.delete = function (table, whereEquals, callback) {
         var where = prepareWhereEquals(whereEquals);
         var values = [table].concat(where.values);
-        return self.one('DELETE FROM ?? ' + where.sql, values, callback);
+        return self.query('DELETE FROM ?? ' + where.sql, values, callback);
     };
 
     return self;
