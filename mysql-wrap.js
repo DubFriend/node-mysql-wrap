@@ -31,55 +31,6 @@ module.exports = function (connection, mysql) {
         var def = Q.defer();
 
         var respond = function (err, res) {
-            var getRowCountForSelectQuery = function (statement, values, callback) {
-                // removes the "SELECT" and "LIMIT" portions of the query.
-                var stripSELECTAndLIMIT = function (statement) {
-                    return statement
-                        .replace(/.* FROM /i, '')
-                        .replace(/ LIMIT .*/i, '');
-                };
-
-                var def = Q.defer();
-
-                connection.query(
-                    'SELECT COUNT(*) FROM ' + stripSELECTAndLIMIT(statement),
-                    values,
-                    function (err, res) {
-                        var rowCount = null;
-                        if(!err) {
-                            rowCount = _.first(res)['COUNT(*)'];
-                        }
-
-                        promiseRespond(def, err, rowCount);
-                        if(callback) {
-                            callback(err, rowCount);
-                        }
-                    }
-                );
-
-                return def.promise;
-            };
-
-            var wrappedResponse = (function () {
-                var wrapped = {};
-                var getQueryType = function (statement) {
-                    return _.first(statement.trim().split(' ')).toUpperCase();
-                };
-                if(getQueryType(statement) === 'SELECT') {
-                    wrapped = {
-                        results: res,
-                        count: _.partial(
-                            getRowCountForSelectQuery,
-                            statement, values
-                        )
-                    };
-                }
-                else {
-                    wrapped = res;
-                }
-                return wrapped;
-            }());
-
             var wrappedError = (function () {
                 if(err) {
                     return _.extend(err, {
@@ -92,8 +43,8 @@ module.exports = function (connection, mysql) {
                 }
             }());
 
-            callback(wrappedError, wrappedResponse);
-            promiseRespond(def, wrappedError, wrappedResponse);
+            callback(wrappedError, res);
+            promiseRespond(def, wrappedError, res);
         };
 
         connection.query(statement, values, respond);
@@ -110,14 +61,9 @@ module.exports = function (connection, mysql) {
             statement : statement + ' LIMIT 1';
 
         self.query(limitedStatement, values, function (err, res) {
-            var results;
-            if(res && res.results) {
-                results = _.extend(res, {
-                    results: _.first(res.results) || null
-                });
-            }
-            callback(err, results);
-            promiseRespond(def, err, results);
+            var result = res ? _.first(res) : null;
+            callback(err, result);
+            promiseRespond(def, err, result);
         });
 
         return def.promise;

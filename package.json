@@ -1,6 +1,6 @@
 {
   "name": "mysql-wrap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mysql interface and helper functions, wrapping node-mysql",
   "main": "mysql-wrap.js",
   "scripts": {

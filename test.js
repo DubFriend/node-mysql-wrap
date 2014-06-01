@@ -9,10 +9,6 @@ var connection = mysql.createConnection({
 });
 var createNodeMySQL = require('./mysql-wrap');
 
-var catchPromise = function (err) {
-    console.log(err);
-};
-
 exports.setUp = function (done) {
     this.sql = createNodeMySQL(connection);
     connection.query('TRUNCATE TABLE `table`', function (err, res) {
@@ -32,7 +28,8 @@ exports.query_select = function (test) {
     self.sql.query('SELECT * FROM `table`')
     .then(function (res) {
         test.deepEqual(
-            res.results,
+            res,
+            // res.results,
             [
                 { id: 1, unique: 'a', field: 'foo' },
                 { id: 2, unique: 'b', field: 'bar' },
@@ -47,55 +44,30 @@ exports.query_select = function (test) {
         );
     })
     .then(function (res) {
-        test.deepEqual(res.results, [{ unique: 'b' }], 'values, no callback');
+        test.deepEqual(res, [{ unique: 'b' }], 'values, no callback');
         return self.sql.query('sElEcT id FRoM `table` Where id = ?', [3]);
     })
     .then(function (res) {
-        test.deepEqual(res.results, [{ id: 3 }], 'sql is case insensitive');
+        test.deepEqual(res, [{ id: 3 }], 'sql is case insensitive');
         return self.sql.query(
             'SELECT id FROM `table` WHERE id = 1',
             function (err, res) {
-                test.deepEqual(res.results, [{ id: 1 }], 'callback no values');
+                test.deepEqual(res, [{ id: 1 }], 'callback no values');
                 test.done();
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.query_select_no_results = function (test) {
     test.expect(1);
     this.sql.query('SELECT * FROM `table` WHERE `field` = "wrong"')
     .then(function (res) {
-        test.deepEqual(res.results, [], 'returns empty array');
+        test.deepEqual(res, [], 'returns empty array');
         test.done();
     })
-    .catch(catchPromise);
-};
-
-exports.query_select_count = function (test) {
-    test.expect(2);
-    var self = this;
-    var responseObject = null;
-    self.sql.query('SELECT * FROM `table` WHERE field = ? LIMIT 1', ['foo'])
-    .then(function (res) {
-        responseObject = res;
-        return self.sql.query('SELECT * FROM `table`');
-    })
-    .then(function (res) {
-        return responseObject.count();
-    })
-    .then(function (rowCount) {
-        test.strictEqual(
-            rowCount, 2,
-            'count ignores LIMIT, and does not depend on being the latest query'
-        );
-        responseObject.count(function (err, rowCount) {
-            test.strictEqual(rowCount, 2, 'takes callback');
-            test.done();
-        });
-    })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.query_insert = function (test) {
@@ -118,7 +90,7 @@ exports.query_insert = function (test) {
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.query_update = function (test) {
@@ -146,7 +118,7 @@ exports.query_update = function (test) {
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.query_delete = function (test) {
@@ -168,25 +140,21 @@ exports.query_delete = function (test) {
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.one = function (test) {
-    test.expect(3);
+    test.expect(2);
     var self = this;
     self.sql.one('SELECT `id` FROM `table`')
     .then(function (res) {
-        test.deepEqual(res.results, { id: 1 }, 'only returns one result');
-        return res.count();
-    })
-    .then(function (rowCountWithoutLimit) {
-        test.strictEqual(rowCountWithoutLimit, 3, 'returns count');
-        self.sql.one('SELECT `id` FROM `table`', function (err, res) {
-            test.deepEqual(res.results, { id: 1 }, 'takes callback');
+        test.deepEqual(res, { id: 1 }, 'only returns one result');
+        return self.sql.one('SELECT `id` FROM `table`', function (err, res) {
+            test.deepEqual(res, { id: 1 }, 'takes callback');
             test.done();
         });
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.select = function (test) {
@@ -195,18 +163,18 @@ exports.select = function (test) {
     self.sql.select('table', { id: 3, field: 'foo' })
     .then(function (res) {
         test.deepEqual(
-            res.results, [{ id: 3, unique: 'c', field: 'foo' }],
+            res, [{ id: 3, unique: 'c', field: 'foo' }],
             'promise'
         );
         self.sql.select('table', { id: 3, field: 'foo' }, function (err, res) {
             test.deepEqual(
-                res.results, [{ id: 3, unique: 'c', field: 'foo' }],
+                res, [{ id: 3, unique: 'c', field: 'foo' }],
                 'callback'
             );
             test.done();
         });
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.selectOne = function (test) {
@@ -215,18 +183,18 @@ exports.selectOne = function (test) {
     self.sql.selectOne('table', { field: 'foo' })
     .then(function (res) {
         test.deepEqual(
-            res.results, { id: 1, unique: 'a', field: 'foo' },
+            res, { id: 1, unique: 'a', field: 'foo' },
             'promise'
         );
         self.sql.selectOne('table', { field: 'foo' }, function (err, res) {
             test.deepEqual(
-                res.results, { id: 1, unique: 'a', field: 'foo' },
+                res, { id: 1, unique: 'a', field: 'foo' },
                 'callback'
             );
             test.done();
         });
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.insert_one_row = function (test) {
@@ -246,7 +214,7 @@ exports.insert_one_row = function (test) {
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.insert_multi_row = function (test) {
@@ -270,7 +238,7 @@ exports.insert_multi_row = function (test) {
             }
         );
     })
-    .catch(catchPromise);
+    .done();
 };
 
 exports.update = function (test) {

@@ -28,26 +28,15 @@ In general node-mysql-wrap exposes the same interface as node-mysql.  All method
 take callbacks with the same `function (err, res) {}` signature as node-mysql.
 In addition all methods also return [q](https://github.com/kriskowal/q) promises.
 
-In node-mysql SELECT statements return an array of results.  node-mysql-wrap SELECT
-return statements return an object where the results array is on a field named
-`results`.  node-mysql SELECT statement objects also have a count method that takes
-either a callback or returns a promise.  Count queries the database for the number
-of rows the associated SELECT statement would have returned without a LIMIT clause
-(if it has one).  This is useful for doing pagination.
-
 In the following examples, parameters marked with an asterik (*) character are
 optional.
 
 ###query(sqlStatement, \*values, \*callback)
 ```javascript
-sql.query('SELECT name FROM fruit WHERE color = "yellow" LIMIT 2')
+sql.query('SELECT name FROM fruit WHERE color = "yellow"')
 .then(function (res) {
-    console.log(res.results);
+    console.log(res);
     //example output: [{ name: "banana" }, { name: "lemon" }]
-    return res.count();
-})
-.then(function (numberOfYellowFruit) {
-    //count returns the number of all fruit that are yellow (exludes the LIMIT clause)
 });
 ```
 
