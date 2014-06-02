@@ -1,10 +1,23 @@
 var _ = require('underscore');
 var Q = require('q');
 
-module.exports = function (connection, mysql) {
+var MySQLWrapError = function (error) {
+    // todo: cant get this working without assigning keys explicitly...
+    this.name = 'MySQLWrapError';
+    this.errno = error.errno;
+    this.code = error.code;
+    this.sqlState = error.sqlState;
+    this.index = error.index;
+    this.indexName = _.last(error.toString().split(' ')).replace(/'/g, '');
+};
+MySQLWrapError.prototype = Object.create(Error.prototype);
+
+module.exports = function (connection) {
     'use strict';
 
     var self = {};
+
+    self.Error = MySQLWrapError;
 
     var promiseRespond = function (def, err, res) {
         if(err) {
@@ -31,18 +44,7 @@ module.exports = function (connection, mysql) {
         var def = Q.defer();
 
         var respond = function (err, res) {
-            var wrappedError = (function () {
-                if(err) {
-                    return _.extend(err, {
-                        indexName: _.last(err.toString().split(' '))
-                            .replace(/'/g, '')
-                    });
-                }
-                else {
-                    return null;
-                }
-            }());
-
+            var wrappedError = err ? new self.Error(err) : null;
             callback(wrappedError, res);
             promiseRespond(def, wrappedError, res);
         };
@@ -99,6 +101,7 @@ module.exports = function (connection, mysql) {
             var values = [];
             var fields = _.isArray(rowOrRows) ?
                 _.keys(_.first(rowOrRows)) : _.keys(rowOrRows);
+
             // NOTE: It is important that fieldsSQL is generated before valuesSQL
             // (because the order of the values array would otherwise be incorrect)
             var fieldsSQL = '(' + _.map(fields, function (field) {

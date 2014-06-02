@@ -85,3 +85,6 @@ sql.insert('fruit', { name: 'banana' })
 
 });
 ```
+
+Error objects are wrapped in a custom Error object.  A reference to this object
+can be gotten at `sql.Error`

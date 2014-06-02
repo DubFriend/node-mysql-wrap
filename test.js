@@ -257,7 +257,8 @@ exports.update = function (test) {
                 test.done();
             }
         );
-    });
+    })
+    .done();
 };
 
 exports.delete = function (test) {
@@ -274,15 +275,19 @@ exports.delete = function (test) {
                 test.done();
             }
         );
-    });
+    })
+    .done();
 };
 
 exports.unique_constraint_error = function (test) {
-    test.expect(2);
-    this.sql.insert('table', { unique: 'a'})
+    test.expect(3);
+    var self = this;
+    self.sql.insert('table', { unique: 'a'})
     .catch(function (err) {
+        test.ok(err instanceof self.sql.Error);
         test.strictEqual(err.code, 'ER_DUP_ENTRY', 'error code');
         test.strictEqual(err.indexName, 'unique', 'index name');
         test.done();
-    });
+    })
+    .done();
 };
