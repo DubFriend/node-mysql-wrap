@@ -45,20 +45,10 @@ module.exports = function (connection) {
     };
 
     self.query = function (statement, valuesOrCallback, callbackOrNothing) {
-        var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
-        var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
-        var def = Q.defer();
-
-        // var respond = function (err, res) {
-        //     var wrappedError = err ? new self.Error(err) : null;
-        //     callback(wrappedError, res);
-        //     promiseRespond(def, wrappedError, res);
-        // };
-
-        // connection.query(statement, values, respond);
-
+        var values = getValueFromParams(valuesOrCallback, callbackOrNothing),
+            callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing),
+            def = Q.defer();
         connection.query(statement, values, _.partial(respond, def, callback));
-
         return def.promise;
     };
 
@@ -184,13 +174,17 @@ module.exports = function (connection) {
 
     self.beginTransaction = function (callback) {
         var def = Q.defer();
-        connection.beginTransaction(_.partial(respond, def, callback || function () {}));
+        connection.beginTransaction(
+            _.partial(respond, def, callback || function () {})
+        );
         return def.promise;
     };
 
     self.rollback = function (callback) {
         var def = Q.defer();
-        connection.rollback(_.partial(respond, def, callback || function () {}));
+        connection.rollback(_.partial(
+            respond, def, callback || function () {})
+        );
         return def.promise;
     };
 
