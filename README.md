@@ -88,3 +88,28 @@ sql.insert('fruit', { name: 'banana' })
 
 Error objects are wrapped in a custom Error object.  A reference to this object
 can be gotten at `sql.Error`
+
+##Transactions
+The node-mysql transaction methods `beginTransaction`, `commit`, and `rollback`
+are available, and return promises as well as take callbacks.
+```javascript
+sql.beginTransaction()
+.then(function () {
+	return sql.insert(...)
+
+})
+.then(function () {
+	sql.commit();
+})
+.catch(function (err) {
+	return sql.rollback(function (err) {
+		throw err;
+	});
+});
+```
+
+##Other methods.
+
+###end, destroy, release, changeUser
+same as in node-mysql.  `end` and `changeUser` return a promise as well as taking
+a callback.

@@ -291,3 +291,52 @@ exports.unique_constraint_error = function (test) {
     })
     .done();
 };
+
+exports.transactionsCommit = function (test) {
+    test.expect(1);
+
+    var self = this;
+
+    self.sql.beginTransaction()
+    .then(function () {
+        return self.sql.insert('table', { unique: 'foozy' });
+    })
+    .then(function () {
+        return self.sql.commit();
+    })
+    .then(function () {
+        return self.sql.selectOne('table', { unique: 'foozy' });
+    })
+    .then(function (res) {
+        test.deepEqual(res, {
+            id: 4, unique: 'foozy', field: ''
+        });
+        test.done();
+    })
+    .done();
+};
+
+exports.transactionsRollback = function (test) {
+    test.expect(1);
+
+    var self = this;
+
+    self.sql.beginTransaction()
+    .then(function () {
+        return self.sql.insert('table', { unique: 'foozy' });
+    })
+    .then(function () {
+        return self.sql.rollback();
+    })
+    .then(function () {
+        return self.sql.selectOne('table', { unique: 'foozy' });
+    })
+    .then(function (res) {
+        test.strictEqual(res, undefined);
+        test.done();
+    })
+    .catch(function (err) {
+        console.log(err.code);
+    })
+    .done();
+};

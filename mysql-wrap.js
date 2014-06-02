@@ -38,18 +38,26 @@ module.exports = function (connection) {
                 callbackOrNothing : function () {};
     };
 
+    var respond = function (def, callback, err, res) {
+        var wrappedError = err ? new self.Error(err) : null;
+        callback(wrappedError, res);
+        promiseRespond(def, wrappedError, res);
+    };
+
     self.query = function (statement, valuesOrCallback, callbackOrNothing) {
         var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
         var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
         var def = Q.defer();
 
-        var respond = function (err, res) {
-            var wrappedError = err ? new self.Error(err) : null;
-            callback(wrappedError, res);
-            promiseRespond(def, wrappedError, res);
-        };
+        // var respond = function (err, res) {
+        //     var wrappedError = err ? new self.Error(err) : null;
+        //     callback(wrappedError, res);
+        //     promiseRespond(def, wrappedError, res);
+        // };
 
-        connection.query(statement, values, respond);
+        // connection.query(statement, values, respond);
+
+        connection.query(statement, values, _.partial(respond, def, callback));
 
         return def.promise;
     };
@@ -155,6 +163,41 @@ module.exports = function (connection) {
         var where = prepareWhereEquals(whereEquals);
         var values = [table].concat(where.values);
         return self.query('DELETE FROM ?? ' + where.sql, values, callback);
+    };
+
+    self.end = function (callback) {
+        var def = Q.defer();
+        connection.end(_.partial(respond, def, callback || function () {}));
+        return def.promise;
+    };
+
+    self.destroy = connection.destroy;
+    self.release = connection.release;
+
+    self.changeUser = function (fig, callback) {
+        var def = Q.defer();
+        connection.changeUser(
+            fig, _.partial(respond, def, callback || function () {})
+        );
+        return def.promise;
+    };
+
+    self.beginTransaction = function (callback) {
+        var def = Q.defer();
+        connection.beginTransaction(_.partial(respond, def, callback || function () {}));
+        return def.promise;
+    };
+
+    self.rollback = function (callback) {
+        var def = Q.defer();
+        connection.rollback(_.partial(respond, def, callback || function () {}));
+        return def.promise;
+    };
+
+    self.commit = function (callback) {
+        var def = Q.defer();
+        connection.commit(_.partial(respond, def, callback || function () {}));
+        return def.promise;
     };
 
     return self;
