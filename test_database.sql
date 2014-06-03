@@ -3,8 +3,8 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Apr 20, 2014 at 12:41 AM
--- Server version: 5.5.35-1ubuntu1
+-- Generation Time: Jun 02, 2014 at 02:14 AM
+-- Server version: 5.5.37-0ubuntu0.14.04.1
 -- PHP Version: 5.5.9-1ubuntu4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -32,6 +32,18 @@ CREATE TABLE IF NOT EXISTS `table` (
   `field` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique` (`unique`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `table2`
+--
+
+CREATE TABLE IF NOT EXISTS `table2` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `field` varchar(16) NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -3,6 +3,7 @@ var Q = require('q');
 
 var MySQLWrapError = function (error) {
     // todo: cant get this working without assigning keys explicitly...
+    Error.captureStackTrace(this);
     this.name = 'MySQLWrapError';
     this.errno = error.errno;
     this.code = error.code;
@@ -38,29 +39,64 @@ module.exports = function (connection) {
                 callbackOrNothing : function () {};
     };
 
+    var isMysqlError = function (error) {
+        return error instanceof Error && error.code;
+    };
+
     var respond = function (def, callback, err, res) {
-        var wrappedError = err ? new self.Error(err) : null;
+        var wrappedError = isMysqlError(err) ? new self.Error(err) : err;
         callback(wrappedError, res);
         promiseRespond(def, wrappedError, res);
     };
 
-    self.query = function (statement, valuesOrCallback, callbackOrNothing) {
-        var values = getValueFromParams(valuesOrCallback, callbackOrNothing),
+    var stripLimit = function (sql) {
+        return sql.replace(/ LIMIT .*/i, '');
+    };
+
+    var paginateLimit = function (fig) {
+        return fig ?
+            'LIMIT ' + fig.resultsPerPage +
+            ' OFFSET ' + ((fig.page - 1) * fig.resultsPerPage) : '';
+    };
+
+    var getStatementObject = function (statementOrObject) {
+        var statement = _.isObject(statementOrObject) ?
+            statementOrObject : {
+                sql: statementOrObject,
+                nestTables: false
+            };
+
+        if(statement.paginate) {
+            statement.sql = stripLimit(statement.sql) + ' ' +
+                            paginateLimit(statement.paginate);
+        }
+
+        return statement;
+    };
+
+    self.query = function (sqlOrObject, valuesOrCallback, callbackOrNothing) {
+        var statement = getStatementObject(sqlOrObject),
+            values = getValueFromParams(valuesOrCallback, callbackOrNothing),
             callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing),
             def = Q.defer();
+
         connection.query(statement, values, _.partial(respond, def, callback));
         return def.promise;
     };
 
-    self.one = function (statement, valuesOrCallback, callbackOrNothing) {
+    self.one = function (sqlOrObject, valuesOrCallback, callbackOrNothing) {
+        var statement = getStatementObject(sqlOrObject);
+
         var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
         var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
         var def = Q.defer();
 
-        var limitedStatement = / LIMIT /.test(statement.toUpperCase) ?
-            statement : statement + ' LIMIT 1';
 
-        self.query(limitedStatement, values, function (err, res) {
+        statement.sql = / LIMIT /.test(statement.sql.toUpperCase) ?
+                        statement.sql : statement.sql + ' LIMIT 1';
+
+        // self.query(limitedStatement, values, function (err, res) {
+        self.query(statement, values, function (err, res) {
             var result = res ? _.first(res) : null;
             callback(err, result);
             promiseRespond(def, err, result);
@@ -82,16 +118,37 @@ module.exports = function (connection) {
         };
     };
 
-    self.select = function (table, whereEquals, callback) {
-        var where = prepareWhereEquals(whereEquals);
-        var values = [table].concat(where.values);
-        return self.query('SELECT * FROM ?? ' + where.sql, values, callback);
+    var selectedFieldsSQL = function (fields) {
+        return fields ? fields.join(', ') : '*';
     };
 
-    self.selectOne = function (table, whereEquals, callback) {
+    self.select = function (tableOrObject, whereEquals, callback) {
+        var statement = _.isObject(tableOrObject) ?
+            tableOrObject : { table: tableOrObject };
+
         var where = prepareWhereEquals(whereEquals);
-        var values = [table].concat(where.values);
-        return self.one('SELECT * FROM ?? ' + where.sql, values, callback);
+        var values = [statement.table].concat(where.values);
+        return self.query(
+            'SELECT ' + selectedFieldsSQL(statement.fields) + ' FROM ?? ' + where.sql +
+            (statement.paginate ? ' ' + paginateLimit(statement.paginate) : ''),
+            values,
+            callback
+        );
+    };
+
+    self.selectOne = function (tableOrObject, whereEquals, callback) {
+        var statement = _.isObject(tableOrObject) ?
+            tableOrObject : { table: tableOrObject };
+
+        var where = prepareWhereEquals(whereEquals);
+        var values = [statement.table].concat(where.values);
+
+        return self.one(
+            'SELECT ' + selectedFieldsSQL(statement.fields) +
+            ' FROM ?? ' + where.sql,
+            values,
+            callback
+        );
     };
 
     self.insert = function (table, rowOrRows, callback) {
@@ -174,17 +231,17 @@ module.exports = function (connection) {
 
     self.beginTransaction = function (callback) {
         var def = Q.defer();
-        connection.beginTransaction(
-            _.partial(respond, def, callback || function () {})
-        );
+        connection.beginTransaction(_.partial(
+            respond, def, callback || function () {}
+        ));
         return def.promise;
     };
 
     self.rollback = function (callback) {
         var def = Q.defer();
         connection.rollback(_.partial(
-            respond, def, callback || function () {})
-        );
+            respond, def, callback || function () {}
+        ));
         return def.promise;
     };
 

@@ -13,10 +13,18 @@ exports.setUp = function (done) {
     this.sql = createNodeMySQL(connection);
     connection.query('TRUNCATE TABLE `table`', function (err, res) {
         connection.query(
-            'INSERT INTO `table` (`unique`, `field`) VALUES ' +
-            '("a", "foo"), ("b", "bar"), ("c", "foo")',
+            'INSERT INTO `table` (`unique`, `field`) ' +
+            'VALUES ("a", "foo"), ("b", "bar"), ("c", "foo")',
             function (err, res) {
-                done();
+                connection.query('TRUNCATE TABLE `table2`', function (err, res) {
+                    connection.query(
+                        'INSERT INTO `table2` (`field`) ' +
+                        'VALUES ("bar")',
+                        function () {
+                            done();
+                        }
+                    );
+                });
             }
         );
     });
@@ -29,7 +37,6 @@ exports.query_select = function (test) {
     .then(function (res) {
         test.deepEqual(
             res,
-            // res.results,
             [
                 { id: 1, unique: 'a', field: 'foo' },
                 { id: 2, unique: 'b', field: 'bar' },
@@ -153,6 +160,31 @@ exports.one = function (test) {
             test.deepEqual(res, { id: 1 }, 'takes callback');
             test.done();
         });
+    })
+    .done();
+};
+
+exports.oneNestedJoin = function (test) {
+    test.expect(1);
+    this.sql.one({
+        sql: 'SELECT * FROM `table` ' +
+             'INNER JOIN `table2` ' +
+             'ON `table`.`field` = `table2`.`field`',
+        nestTables: true
+    })
+    .then(function (res) {
+        test.deepEqual(res, {
+            table: {
+                id: 2,
+                unique: 'b',
+                field: 'bar'
+            },
+            table2: {
+                id: 1,
+                field: 'bar'
+            }
+        });
+        test.done();
     })
     .done();
 };
@@ -294,9 +326,7 @@ exports.unique_constraint_error = function (test) {
 
 exports.transactionsCommit = function (test) {
     test.expect(1);
-
     var self = this;
-
     self.sql.beginTransaction()
     .then(function () {
         return self.sql.insert('table', { unique: 'foozy' });
@@ -318,9 +348,7 @@ exports.transactionsCommit = function (test) {
 
 exports.transactionsRollback = function (test) {
     test.expect(1);
-
     var self = this;
-
     self.sql.beginTransaction()
     .then(function () {
         return self.sql.insert('table', { unique: 'foozy' });
@@ -335,8 +363,58 @@ exports.transactionsRollback = function (test) {
         test.strictEqual(res, undefined);
         test.done();
     })
-    .catch(function (err) {
-        console.log(err.code);
+    .done();
+};
+
+exports.queryPaginate = function (test) {
+    test.expect(1);
+    var self = this;
+    self.sql.query({
+        sql: 'SELECT id FROM `table`',
+        paginate: {
+            page: 1,
+            resultsPerPage: 2
+        }
+    })
+    .then(function (results) {
+        test.deepEqual(_.pluck(results, 'id'), [1, 2]);
+        test.done();
+    })
+    .done();
+};
+
+exports.paginateSelect = function (test) {
+    test.expect(1);
+    this.sql.select({
+        table: 'table',
+        paginate: {
+            page: 1,
+            resultsPerPage: 2
+        }
+    })
+    .then(function (results) {
+        test.deepEqual(_.pluck(results, 'id'), [1 , 2]);
+        test.done();
+    })
+    .done();
+};
+
+exports.fieldsSelect = function (test) {
+    test.expect(1);
+    this.sql.select({ table: 'table', fields: ['id'] })
+    .then(function (results) {
+        test.deepEqual(results, [{ id: 1 }, { id: 2 }, { id: 3 }]);
+        test.done();
+    })
+    .done();
+};
+
+exports.fieldsSelectOne = function (test) {
+    test.expect(1);
+    this.sql.selectOne({ table: 'table', fields: ['id'] })
+    .then(function (result) {
+        test.deepEqual(result, { id: 1 });
+        test.done();
     })
     .done();
 };

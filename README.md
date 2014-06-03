@@ -40,6 +40,19 @@ sql.query('SELECT name FROM fruit WHERE color = "yellow"')
 });
 ```
 
+`query` may take a configuration object in place of the `sqlStatement` parameter.
+this object allows for node-mysql's nested table join api, as well as pagination.
+```javascript
+sql.query({
+	sql: 'SELECT * FROM fruitBasket LEFT JOIN fruit ON fruit.basketID = fruitBasket.id',
+	nestTables: true,
+	paginate: {
+		page: 3,
+		resultsPerPage: 15
+	}
+});
+```
+
 ###one(sqlStatement, \*values, \*callback)
 Works the same as sql.query except it only returns a single row instead of an array
 of rows.  Adds a "LIMIT 1" clause if a LIMIT clause is not allready present in
@@ -53,6 +66,23 @@ sql.select('fruit', { color: 'yellow', isRipe: true })
 
 ###selectOne(table, \*whereEqualsObject, \*callback)
 Same as sql.select except selectOne returns a single row instead of an array of rows.
+
+
+`select` and `selectOne` may take a configuration object in place of the table
+parameter.  The configuration object add pagination and/or restrict which fields
+are selected.
+```javascript
+sql.select({
+	table: 'fruit',
+	fields: ['color'],
+	paginate: {
+		page: 2,
+		resultsPerPage: 15
+	}
+});
+```
+
+
 
 ###insert(table, insertObject, \*callback)
 ```javascript
