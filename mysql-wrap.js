@@ -85,17 +85,14 @@ module.exports = function (connection) {
     };
 
     self.one = function (sqlOrObject, valuesOrCallback, callbackOrNothing) {
-        var statement = getStatementObject(sqlOrObject);
-
-        var values = getValueFromParams(valuesOrCallback, callbackOrNothing);
-        var callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing);
-        var def = Q.defer();
-
+        var statement = getStatementObject(sqlOrObject),
+            values = getValueFromParams(valuesOrCallback, callbackOrNothing),
+            callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing),
+            def = Q.defer();
 
         statement.sql = / LIMIT /.test(statement.sql.toUpperCase) ?
                         statement.sql : statement.sql + ' LIMIT 1';
 
-        // self.query(limitedStatement, values, function (err, res) {
         self.query(statement, values, function (err, res) {
             var result = res ? _.first(res) : null;
             callback(err, result);
