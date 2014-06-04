@@ -316,7 +316,7 @@ exports.unique_constraint_error = function (test) {
     var self = this;
     self.sql.insert('table', { unique: 'a'})
     .catch(function (err) {
-        test.ok(err instanceof self.sql.Error);
+        test.ok(err instanceof createNodeMySQL.Error);
         test.strictEqual(err.code, 'ER_DUP_ENTRY', 'error code');
         test.strictEqual(err.indexName, 'unique', 'index name');
         test.done();

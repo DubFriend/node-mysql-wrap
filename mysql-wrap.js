@@ -13,12 +13,12 @@ var MySQLWrapError = function (error) {
 };
 MySQLWrapError.prototype = Object.create(Error.prototype);
 
-module.exports = function (connection) {
+var createMySQLWrap = function (connection) {
     'use strict';
 
     var self = {};
 
-    self.Error = MySQLWrapError;
+    // self.Error = MySQLWrapError;
 
     var promiseRespond = function (def, err, res) {
         if(err) {
@@ -44,7 +44,7 @@ module.exports = function (connection) {
     };
 
     var respond = function (def, callback, err, res) {
-        var wrappedError = isMysqlError(err) ? new self.Error(err) : err;
+        var wrappedError = isMysqlError(err) ? new MySQLWrapError(err) : err;
         callback(wrappedError, res);
         promiseRespond(def, wrappedError, res);
     };
@@ -250,3 +250,7 @@ module.exports = function (connection) {
 
     return self;
 };
+
+createMySQLWrap.Error = MySQLWrapError;
+
+module.exports = createMySQLWrap;
