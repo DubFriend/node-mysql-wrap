@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var Q = require('q');
-var log = require('./log');
 
 var MySQLWrapError = function (error) {
 
