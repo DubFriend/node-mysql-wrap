@@ -1,24 +1,27 @@
 var _ = require('underscore');
 var Q = require('q');
+var log = require('./log');
 
 var MySQLWrapError = function (error) {
-    // todo: cant get this working without assigning keys explicitly...
+
     Error.captureStackTrace(this);
+    this.statusCode = 400;
+    this.message = _.last(new Error(error).message.split(':')).trim();
     this.name = 'MySQLWrapError';
     this.errno = error.errno;
     this.code = error.code;
     this.sqlState = error.sqlState;
     this.index = error.index;
-    this.indexName = _.last(error.toString().split(' ')).replace(/'/g, '');
+    this.indexName = _.last(this.message.split(' ')).replace(/'/g, '');
+
 };
+
 MySQLWrapError.prototype = Object.create(Error.prototype);
 
 var createMySQLWrap = function (connection) {
     'use strict';
 
     var self = {};
-
-    // self.Error = MySQLWrapError;
 
     var promiseRespond = function (def, err, res) {
         if(err) {
@@ -75,12 +78,39 @@ var createMySQLWrap = function (connection) {
     };
 
     self.query = function (sqlOrObject, valuesOrCallback, callbackOrNothing) {
+
         var statement = getStatementObject(sqlOrObject),
             values = getValueFromParams(valuesOrCallback, callbackOrNothing),
             callback = getCallBackFromParams(valuesOrCallback, callbackOrNothing),
             def = Q.defer();
 
-        connection.query(statement, values, _.partial(respond, def, callback));
+        if(connection.getConnection){
+
+            if (!this.transactionConn){
+                this.transactionConn.query(
+                    statement, values, function(err, rows){
+                        respond(def, callback, err, rows);
+                    }
+                );
+            } else {
+                connection.getConnection(function(err, conn){
+                    if(err){
+                        respond(def, callback, err, null);
+                    } else {
+                        conn.query(statement, values, function(err, rows){
+                            respond(def, callback, err, rows);
+                            conn.release();
+                        });
+                    }
+                });
+            }
+
+        } else {
+            connection.query(
+                statement, values, _.partial(respond, def, callback)
+            );
+        }
+
         return def.promise;
     };
 
@@ -227,24 +257,62 @@ var createMySQLWrap = function (connection) {
     };
 
     self.beginTransaction = function (callback) {
+
         var def = Q.defer();
-        connection.beginTransaction(_.partial(
-            respond, def, callback || function () {}
-        ));
+
+        if(connection.getConnection){
+            connection.getConnection(function(err, conn){
+                conn.beginTransaction(_.partial(
+                    respond, def, callback || function () {}
+                ));
+
+                self.transactionConn = conn;
+            })
+        } else {
+            connection.beginTransaction(_.partial(
+                respond, def, callback || function () {}
+            ));
+        }
+
         return def.promise;
     };
 
     self.rollback = function (callback) {
         var def = Q.defer();
-        connection.rollback(_.partial(
-            respond, def, callback || function () {}
-        ));
+        if(connection.getConnection){
+            var conn = self.transactionConn;
+
+            conn.rollback(function(){
+                conn.release();
+                self.transactionConn = null;
+                respond(def, callback || function () {});
+            });
+
+
+        } else {
+            connection.rollback(_.partial(
+                respond, def, callback || function () {}
+            ));
+        }
         return def.promise;
     };
 
     self.commit = function (callback) {
         var def = Q.defer();
-        connection.commit(_.partial(respond, def, callback || function () {}));
+        if(connection.getConnection){
+            var conn = self.transactionConn;
+
+            conn.commit(function(){
+                conn.release();
+                self.transactionConn = null;
+                respond(def, callback || function () {})
+            });
+
+        } else {
+            connection.commit(_.partial(
+                respond, def, callback || function () {}
+            ));
+        }
         return def.promise;
     };
 
