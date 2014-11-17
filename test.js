@@ -418,3 +418,50 @@ exports.fieldsSelectOne = function (test) {
     })
     .done();
 };
+
+exports.connections_pooling = function (test) {
+    test.expect(1);
+
+    var sql = createNodeMySQL(mysql.createPool({
+        host: configuration.database.host,
+        user: configuration.database.user,
+        password: configuration.database.password,
+        database: configuration.database.name
+    }));
+
+    sql.selectOne('table', { id: 1 })
+    .then(function (res) {
+        test.deepEqual(res, { id: 1, unique: 'a', field: 'foo' });
+        test.done();
+    }).done();
+};
+
+exports.connection_pooling_transactionsCommit = function (test) {
+    test.expect(1);
+
+    var sql = createNodeMySQL(mysql.createPool({
+        host: configuration.database.host,
+        user: configuration.database.user,
+        password: configuration.database.password,
+        database: configuration.database.name
+    }));
+
+    var self = this;
+    sql.beginTransaction()
+    .then(function () {
+        return sql.insert('table', { unique: 'foozy' });
+    })
+    .then(function () {
+        return sql.commit();
+    })
+    .then(function () {
+        return sql.selectOne('table', { unique: 'foozy' });
+    })
+    .then(function (res) {
+        test.deepEqual(res, {
+            id: 4, unique: 'foozy', field: ''
+        });
+        test.done();
+    })
+    .done();
+};
