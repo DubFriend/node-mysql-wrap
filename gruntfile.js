@@ -3,7 +3,8 @@ module.exports = function(grunt) {
         pkg: grunt.file.readJSON('package.json'),
 
         nodeunit: {
-            all: ['test.js']
+            all: ['test/no_pooling.js', 'test/pooling.js']
+            // all: ['test.js']
         },
 
         watch: {

@@ -22,6 +22,8 @@ var createMySQLWrap = function (connection) {
 
     var self = {};
 
+    var transactionConn = null;
+
     var promiseRespond = function (def, err, res) {
         if(err) {
             def.reject(err);
@@ -85,8 +87,8 @@ var createMySQLWrap = function (connection) {
 
         if(connection.getConnection){
 
-            if (this.transactionConn){
-                this.transactionConn.query(
+            if (transactionConn){
+                transactionConn.query(
                     statement, values, function(err, rows){
                         respond(def, callback, err, rows);
                     }
@@ -265,7 +267,7 @@ var createMySQLWrap = function (connection) {
                     respond, def, callback || function () {}
                 ));
 
-                self.transactionConn = conn;
+                transactionConn = conn;
             })
         } else {
             connection.beginTransaction(_.partial(
@@ -279,11 +281,11 @@ var createMySQLWrap = function (connection) {
     self.rollback = function (callback) {
         var def = Q.defer();
         if(connection.getConnection){
-            var conn = self.transactionConn;
+            var conn = transactionConn;
 
             conn.rollback(function(){
                 conn.release();
-                self.transactionConn = null;
+                transactionConn = null;
                 respond(def, callback || function () {});
             });
 
@@ -299,12 +301,12 @@ var createMySQLWrap = function (connection) {
     self.commit = function (callback) {
         var def = Q.defer();
         if(connection.getConnection){
-            var conn = self.transactionConn;
+            var conn = transactionConn;
 
             conn.commit(function(){
                 conn.release();
-                self.transactionConn = null;
-                respond(def, callback || function () {})
+                transactionConn = null;
+                respond(def, callback || function () {});
             });
 
         } else {
