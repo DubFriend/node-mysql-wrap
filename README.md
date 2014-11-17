@@ -22,6 +22,22 @@ var createMySQLWrap = require('mysql-wrap');
 var sql = createMySQLWrap(connection);
 ```
 
+You can also enable connection pooling by passing a connection pool rather than
+a connection
+```javascript
+//create a node-mysql pool
+var mysql = require('mysql');
+var pool =  mysql.createPool({
+    host: 'your-host-name',
+    user: 'your-user',
+    password: 'your-password',
+    database: 'your-database-name'
+});
+//and pass it into the node-mysql-wrap constructor
+var createMySQLWrap = require('mysql-wrap');
+var sql = createMySQLWrap(pool);
+```
+
 ##Methods
 
 In general node-mysql-wrap exposes the same interface as node-mysql.  All methods
