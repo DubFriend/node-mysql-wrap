@@ -3,7 +3,11 @@ module.exports = function(grunt) {
         pkg: grunt.file.readJSON('package.json'),
 
         nodeunit: {
-            all: ['test/no_pooling.js', 'test/pooling.js']
+            all: [
+                'test/no_pooling.js',
+                'test/pooling.js',
+                'test/pool_cluster.js'
+            ]
             // all: ['test.js']
         },
 
