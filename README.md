@@ -22,7 +22,7 @@ var createMySQLWrap = require('mysql-wrap');
 var sql = createMySQLWrap(connection);
 ```
 
-You can also enable connection pooling by passing a connection pool rather than
+Enable connection pooling by passing a connection pool rather than
 a connection
 ```javascript
 //create a node-mysql pool
@@ -38,13 +38,41 @@ var createMySQLWrap = require('mysql-wrap');
 var sql = createMySQLWrap(pool);
 ```
 
+Pool Clusters with read write seperation is also supported
+```javascript
+var poolCluster = mysql.createPoolCluster({
+    canRetry: true,
+    removeNodeErrorCount: 1,
+    restoreNodeTimeout: 20000,
+    defaultSelector: 'RR'
+});
+
+poolCluster.add('MASTER', {
+    connectionLimit: 200,
+    host: configuration.database.host,
+    port: 3306,
+    user: configuration.database.user,
+    password: configuration.database.password,
+    database: configuration.database.name
+});
+
+var sql = createNodeMySQL(poolCluster, {
+    //uses the same pattern as node-mysql's getConnection patterns
+    replication: {
+        write: 'MASTER',
+        read: '*'
+    }
+});
+```
+
+
 ##Methods
 
 In general node-mysql-wrap exposes the same interface as node-mysql.  All methods
 take callbacks with the same `function (err, res) {}` signature as node-mysql.
 In addition all methods also return [q](https://github.com/kriskowal/q) promises.
 
-In the following examples, parameters marked with an asterik (*) character are
+In the following examples, parameters marked with an asterik (\*) character are
 optional.
 
 ###query(sqlStatement, \*values, \*callback)
