@@ -27,7 +27,6 @@ poolCluster.add('MASTER', {
 var createNodeMySQL = require('../mysql-wrap');
 
 exports.setUp = function (done) {
-
     this.sql = createNodeMySQL(poolCluster, {
         replication: {
             write: 'MASTER',

@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "mysql": "^2.8.0",
+    "q": "^1.4.1",
     "underscore": "~1.6.0"
   }
 }
