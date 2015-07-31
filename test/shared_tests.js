@@ -244,6 +244,47 @@ module.exports = function (connection, createNodeMySQL) {
         .done();
     };
 
+    self.replace_inserts_row = function (test) {
+        test.expect(3);
+        var self = this;
+        self.sql.replace('table', { unique: 'd', field: 'baz' })
+        .then(function (res) {
+            test.strictEqual(res.affectedRows, 1, 'returns affectedRows');
+            test.strictEqual(res.insertId, 4, 'returns insert id');
+            connection.query(
+                'SELECT * FROM `table` WHERE `id` = 4',
+                function (err, res) {
+                    test.deepEqual(res, [
+                        { id: 4, unique: 'd', field: 'baz' }
+                    ], 'inserts into database');
+                    test.done();
+                }
+            );
+        })
+        .done();
+    };
+
+    self.replace_replaces_row_with_same_unique_key = function (test) {
+        test.expect(1);
+        var self = this;
+        self.sql.replace('table', { unique: 'd', field: 'baz' })
+        .then(function () {
+            return self.sql.replace('table', { unique: 'd', field: 'bar' });
+        })
+        .then(function () {
+            connection.query(
+                'SELECT * FROM `table` WHERE `unique` = "d"',
+                function (err, res) {
+                    test.deepEqual(res, [
+                        { id: 5, unique: 'd', field: 'bar' }
+                    ], 'replaces existing row');
+                    test.done();
+                }
+            );
+        })
+        .done();
+    };
+
     self.update = function (test) {
         test.expect(1);
         var self = this;

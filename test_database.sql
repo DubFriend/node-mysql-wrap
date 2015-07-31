@@ -29,7 +29,7 @@ SET time_zone = "+00:00";
 CREATE TABLE IF NOT EXISTS `table` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `unique` varchar(32) NOT NULL,
-  `field` varchar(32) NOT NULL,
+  `field` varchar(32) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique` (`unique`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `table` (
 
 CREATE TABLE IF NOT EXISTS `table2` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `field` varchar(16) NOT NULL,
+  `field` varchar(16) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 

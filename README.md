@@ -140,6 +140,12 @@ sql.insert('fruit', [
 ])
 ```
 
+###replace(table, insertObject, \*callback)
+[Supports Mysql "REPLACE INTO" syntax](https://dev.mysql.com/doc/refman/5.0/en/replace.html)
+```javascript
+sql.replace('fruit', { uniqueKey: 5, name: 'plum', isRipe: false, color: 'brown' });
+```
+
 ###update(table, setValues, \*whereEqualsObject, \*callback)
 ```javascript
 sql.update('fruit', { isRipe: false }, { name: 'grape' })

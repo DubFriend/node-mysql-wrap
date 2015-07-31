@@ -7,6 +7,7 @@ var connection = mysql.createConnection({
     password: configuration.database.password,
     database: configuration.database.name
 });
+
 var createNodeMySQL = require('../mysql-wrap');
 
 exports.setUp = function (done) {

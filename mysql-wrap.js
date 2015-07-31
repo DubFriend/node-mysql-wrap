@@ -187,41 +187,49 @@ var createMySQLWrap = function (connection, options) {
         );
     };
 
-    self.insert = function (table, rowOrRows, callback) {
-        var prepareInsertRows = function (rowOrRows) {
-            var values = [];
-            var fields = _.isArray(rowOrRows) ?
-                _.keys(_.first(rowOrRows)) : _.keys(rowOrRows);
+    var prepareInsertRows = function (rowOrRows) {
+        var values = [];
+        var fields = _.isArray(rowOrRows) ?
+            _.keys(_.first(rowOrRows)) : _.keys(rowOrRows);
 
-            // NOTE: It is important that fieldsSQL is generated before valuesSQL
-            // (because the order of the values array would otherwise be incorrect)
-            var fieldsSQL = '(' + _.map(fields, function (field) {
-                values.push(field);
-                return '??';
-            }).join(', ') + ')';
+        // NOTE: It is important that fieldsSQL is generated before valuesSQL
+        // (because the order of the values array would otherwise be incorrect)
+        var fieldsSQL = '(' + _.map(fields, function (field) {
+            values.push(field);
+            return '??';
+        }).join(', ') + ')';
 
-            var processValuesSQL = function (row) {
-                return '(' + _.map(fields, function (field) {
-                    values.push(row[field]);
-                    return '?';
-                }) + ')';
-            };
-
-            var valuesSQL = _.isArray(rowOrRows) ?
-                _.map(rowOrRows, processValuesSQL).join(', ') :
-                processValuesSQL(rowOrRows);
-
-            return {
-                values: values,
-                sql: fieldsSQL + ' VALUES ' + valuesSQL
-            };
+        var processValuesSQL = function (row) {
+            return '(' + _.map(fields, function (field) {
+                values.push(row[field]);
+                return '?';
+            }) + ')';
         };
 
-        var rows = prepareInsertRows(rowOrRows);
+        var valuesSQL = _.isArray(rowOrRows) ?
+            _.map(rowOrRows, processValuesSQL).join(', ') :
+            processValuesSQL(rowOrRows);
 
+        return {
+            values: values,
+            sql: fieldsSQL + ' VALUES ' + valuesSQL
+        };
+    };
+
+    self.insert = function (table, rowOrRows, callback) {
+        var rows = prepareInsertRows(rowOrRows);
         return self.query(
             'INSERT INTO ?? ' + rows.sql,
             [table].concat(rows.values),
+            callback
+        );
+    };
+
+    self.replace = function (table, rowRaw, callback) {
+        var row = prepareInsertRows(rowRaw);
+        return self.query(
+            'REPLACE INTO ?? ' + row.sql,
+            [table].concat(row.values),
             callback
         );
     };
