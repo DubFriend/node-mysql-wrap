@@ -234,6 +234,30 @@ var createMySQLWrap = function (connection, options) {
         );
     };
 
+    self.save = function (table, rowRaw, callback) {
+        var prepareSaveRows = function () {
+            var insertRow = prepareInsertRows(rowRaw);
+            var setValues = [];
+            var setSQL = _.map(rowRaw, function (val, key) {
+                setValues.push(key, val);
+                return '?? = ?';
+            }).join(', ');
+
+            return {
+                sql: insertRow.sql + ' ON DUPLICATE KEY UPDATE ' + setSQL,
+                values: insertRow.values.concat(setValues)
+            };
+        };
+
+        var row = prepareSaveRows();
+
+        return self.query(
+            'INSERT INTO ?? ' + row.sql,
+            [table].concat(row.values),
+            callback
+        );
+    };
+
     self.update = function (table, setData, whereEquals, callback) {
         var prepareSetRows = function (setData) {
             var values = [];

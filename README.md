@@ -146,6 +146,17 @@ sql.insert('fruit', [
 sql.replace('fruit', { uniqueKey: 5, name: 'plum', isRipe: false, color: 'brown' });
 ```
 
+###save(table, insertObject, \*callback)
+Inserts a new row if no duplicate unique or primary keys
+are found, else it updates that row.
+```sql
+INSERT INTO fruit (uniqueKey, isRipe) VALUES (5, 0)
+ON DUPLICATE KEY UPDATE uniqueKey=5, isRipe=0
+```
+```javascript
+sql.save('fruit', { uniqueKey: 5, isRipe: false });
+```
+
 ###update(table, setValues, \*whereEqualsObject, \*callback)
 ```javascript
 sql.update('fruit', { isRipe: false }, { name: 'grape' })
